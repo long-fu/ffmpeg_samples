@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     avformat_network_init();
 
     type = av_hwdevice_find_type_by_name(device_name);
-
+    
     if (type == AV_HWDEVICE_TYPE_NONE)
     {
         fprintf(stderr, "Device type %s is not supported.\n", device_name);
@@ -266,6 +266,7 @@ int main(int argc, char *argv[])
     
     video = input_ctx->streams[0];
     
+    // video 的流数据读取错误
     if (avcodec_parameters_to_context(decoder_ctx, video->codecpar) < 0)
     {
         return -1;
