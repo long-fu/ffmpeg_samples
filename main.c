@@ -33,8 +33,6 @@
 
 #include <stdio.h>
 
-#include "nvcuvid.h"
-
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/pixdesc.h>
@@ -172,22 +170,14 @@ int main(int argc, char *argv[])
     enum AVHWDeviceType type;
     int i;
 
-    // if (argc < 4) {
-    //     fprintf(stderr, "Usage: %s <device type> <input file> <output file>\n", argv[0]);
-    //     return -1;
-    // }
-
     const char *device_name = "cuda";
-    const char *input_file = "rtmp://127.0.0.1/live";
+    const char *input_file = "../data/input.mp4";
     const char *out_file = "temp.tmp";
 
-    avformat_network_init();
-
     type = av_hwdevice_find_type_by_name(device_name);
-
     if (type == AV_HWDEVICE_TYPE_NONE)
     {
-        fprintf(stderr, "Device type %s is not supported.\n", device_name);
+        fprintf(stderr, "Device type %s is not supported.\n", argv[1]);
         fprintf(stderr, "Available device types:");
         while ((type = av_hwdevice_iterate_types(type)) != AV_HWDEVICE_TYPE_NONE)
             fprintf(stderr, " %s", av_hwdevice_get_type_name(type));
@@ -215,32 +205,25 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (!(decoder = avcodec_find_decoder_by_name("h264_cuvid")))
-    {
-        fprintf(stderr, "Could not find decoder.\n");
+    decoder = avcodec_find_decoder_by_name("h264_cuvid");
+    if(decoder == NULL) {
+        fprintf(stderr, "Cannot support decoder %s.\n", "h264_cuvid");
         return -1;
-    }
-    else
-    {
-        fprintf(stderr, "解码器 %s \n", decoder->name);
     }
     video_stream = 0;
 
     /* find the video stream information */
-    // ret = av_find_best_stream(input_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &decoder, 0);
-    // if (ret < 0) {
+    // ret = av_find_best_stream(input_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &decoder, 0);
+    // if (ret < 0)
+    // {
     //     fprintf(stderr, "Cannot find a video stream in the input file\n");
     //     return -1;
     // }
     // video_stream = ret;
-    // fprintf(stderr,"stream index %d\n", video_stream);
-    
+
     for (i = 0;; i++)
     {
-        // fprintf(stderr, "hw config index %d\n", i);
-
         const AVCodecHWConfig *config = avcodec_get_hw_config(decoder, i);
-
         if (!config)
         {
             fprintf(stderr, "Decoder %s does not support device type %s.\n",
@@ -256,38 +239,16 @@ int main(int argc, char *argv[])
     }
 
     if (!(decoder_ctx = avcodec_alloc_context3(decoder)))
-    {
         return AVERROR(ENOMEM);
-    }
 
-    fprintf(stderr, "id:%d==%d type: %d==%d \n",decoder_ctx->codec_id,decoder->id,decoder_ctx->codec_type,decoder->type);
-
-    // printf("strean ls %d %d\n", input_ctx->nb_streams, input_ctx->max_streams);
-    
-    video = input_ctx->streams[0];
-    
+    video = input_ctx->streams[video_stream];
     if (avcodec_parameters_to_context(decoder_ctx, video->codecpar) < 0)
-    {
         return -1;
-    }
-    fprintf(stderr, "id:%d==%d type: %d==%d \n",decoder_ctx->codec_id,decoder->id,decoder_ctx->codec_type,decoder->type);
-
-    // fprintf(stderr, "id:%d==%d type: %d==%d \n",decoder_ctx->codec_id,video->codecpar->codec_id,decoder_ctx->codec_type,video->codecpar->codec_type);
-
 
     decoder_ctx->get_format = get_hw_format;
+
     if (hw_decoder_init(decoder_ctx, type) < 0)
-    {
         return -1;
-    }
-
-    // if (avctx->codec_id != codec->id || (avctx->codec_type != codec->type &&
-    //                                      avctx->codec_type != AVMEDIA_TYPE_ATTACHMENT)) {
-    //     av_log(avctx, AV_LOG_ERROR, "Codec type or id mismatches\n");
-    //     return AVERROR(EINVAL);
-    // }
-
-    fprintf(stderr, "id:%d==%d type: %d==%d \n",decoder_ctx->codec_id,decoder->id,decoder_ctx->codec_type,decoder->type);
 
     if ((ret = avcodec_open2(decoder_ctx, decoder, NULL)) < 0)
     {
@@ -301,11 +262,8 @@ int main(int argc, char *argv[])
     /* actual decoding and dump the raw data */
     while (ret >= 0)
     {
-        if ((ret = av_read_frame(input_ctx, packet)) < 0){
-            printf("read frame error \n");
+        if ((ret = av_read_frame(input_ctx, packet)) < 0)
             break;
-        }
-            
 
         if (video_stream == packet->stream_index)
             ret = decode_write(decoder_ctx, packet);
