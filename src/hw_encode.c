@@ -38,7 +38,7 @@
  
 static int width, height;
 static AVBufferRef *hw_device_ctx = NULL;
-static enum AVPixelFormat host_sw_format;
+static enum AVPixelFormat sw_format;
 static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx)
 {
     AVBufferRef *hw_frames_ref;
@@ -51,7 +51,7 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx)
     }
     frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
     frames_ctx->format    = AV_PIX_FMT_CUDA;
-    frames_ctx->sw_format = host_sw_format;
+    frames_ctx->sw_format = sw_format;
     frames_ctx->width     = width;
     frames_ctx->height    = height;
     frames_ctx->initial_pool_size = 20;
@@ -108,20 +108,22 @@ int main(int argc, char *argv[])
     const AVCodec *codec = NULL;
     const char *enc_name = "h264_nvenc";
  
-    // if (argc < 5) {
-    //     fprintf(stderr, "Usage: %s <width> <height> <input file> <output file>\n", argv[0]);
-    //     return -1;
-    // }
+    if (argc < 6) {
+        fprintf(stderr, "Usage: %s <width> <height> <format> <input file> <output file>\n", argv[0]);
+        return -1;
+    }
  
-    const char *input_file = "../data/HeavyHand_1080p.yuv";
-    width  = 1920;
-    height = 1080;
-    host_sw_format = AV_PIX_FMT_YUV420P;
+    
+    width  = atoi(argv[1]);
+    height = atoi(argv[2]);
+    sw_format = atoi(argv[3]);
+    const char *input_file = argv[4];
+    const char *output_file = argv[5];
 
     // const char *input_file = "../data/output.yuv";
     // width = 3840;
     // height = 2160;
-    // host_sw_format = AV_PIX_FMT_NV12 ;
+    // sw_format = AV_PIX_FMT_NV12 ;
 
     size   = width * height; 
        
@@ -181,7 +183,7 @@ int main(int argc, char *argv[])
         /* read data into software frame, and transfer them into hw frame */
         sw_frame->width  = width;
         sw_frame->height = height;
-        sw_frame->format = host_sw_format;
+        sw_frame->format = sw_format;
     
         if ((err = av_frame_get_buffer(sw_frame, 0)) < 0)
             goto close;

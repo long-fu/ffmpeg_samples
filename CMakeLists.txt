@@ -16,7 +16,7 @@ link_directories(
     /usr/local/lib/
 )
 
-add_executable(main main.c)
+add_executable(main main_hw_de.c)
 target_link_libraries(main stdc++ pthread avcodec avformat avdevice avutil swresample avfilter swscale nvcuvid nvidia-encode)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
